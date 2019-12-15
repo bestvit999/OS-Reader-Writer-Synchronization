@@ -5,7 +5,6 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include <semaphore.h> // synchronization for `read` & `write`
 #include <pthread.h> // using thread to perform the `read` & `write`
 #include "transfer.h"
 #include "util.h"
@@ -16,12 +15,10 @@ void changemod(int sockfd); // change mod
 ssize_t create(int sockfd, FILE *fp); // create the file
 
 // data set of synchronization
-sem_t wrt = 1;
-sem_t mux = 1;
+synlock slock; // the slock is using for SYNCHONIZATION
 int readcount = 0;
 
 void * start(void * arg); // start the server site
-
 int main(int argc, char * argv[]){
     // socket
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -73,7 +70,7 @@ int main(int argc, char * argv[]){
         if (t_no == 50)
             t_no = 0;
     }
-    return 0;
+    // return 0;
 }
 
 void * start(void * arg){
@@ -149,8 +146,16 @@ void * start(void * arg){
     }
 
     if (strcmp(act, "read") == 0){
-        //// critical section : perform `read`, i.e. send the file to client site ////
+        //// synchronization ////
+        int syn_status = 0;
+        if (slock.isLock(filename,READING) == 0){
+            perror("`read`:Can't read during writing");
+            syn_status = 1;
+            // exit(1);
+        }
 
+        readcount++;
+        //// critical section : perform `read`, i.e. send the file to client site ////
         // recv its user name
         char user[BUFFSIZE] = {0};
         if (recv(connfd, user, BUFFSIZE, 0) == -1){
@@ -168,24 +173,36 @@ void * start(void * arg){
         // check capList
         capability_list capList;
         readCapability(capList);
+        
         if(!capList.isReadPermit(user,group,filename)){
             send(connfd,"fail",BUFFSIZE,0);
-            exit(1);
+        }else if (syn_status){
+            send(connfd, "syn_fail", BUFFSIZE, 0);
         }else{
             send(connfd,"succuss",BUFFSIZE,0);
+            // fopen the file that want to be `read(download)`
+            FILE *fp = fopen(path_to_file,"r");
+            ssize_t total = readfile(connfd, fp);
+
+            sleep(5); // just for simulate big file
+            printf("send file susccess, numbytes = %ld\n",total);
+
+            fclose(fp);
         }
-
-        // fopen the file that want to be `read(download)`
-        FILE *fp = fopen(path_to_file,"r");
-        ssize_t total = readfile(connfd, fp);
-
-        printf("send file susccess, numbytes = %ld\n",total);
-
-        fclose(fp);
         //// critical section ////
+        readcount--;
+        slock.remove(filename);
     }
 
     if (strcmp(act, "write") == 0){
+        //// synchronization ////
+        int syn_status = 0;
+        if (slock.isLock(filename,WRITING) == 0){
+            perror("`read`:Can't write during reading");
+            syn_status = 1;
+            // exit(1);
+        }
+
         //// critical section : perform `write`, i.e. write the file from client to server site ////
         // where the `write mode` parameter can be either ‘o’ or ‘a’, 
         // which allows Ken to either overwrite the original file or append his data in the end of the file, respectively.
@@ -214,41 +231,44 @@ void * start(void * arg){
         // check capList
         capability_list capList;
         readCapability(capList);
+
+        
         if(!capList.isWritePermit(user,group,filename)){
             send(connfd,"fail",BUFFSIZE,0);
-            exit(1);
+        }else if (syn_status){
+            send(connfd, "syn_fail", BUFFSIZE, 0);
         }else{
             send(connfd,"succuss",BUFFSIZE,0);
+             // fopen a exist file on server, if not exist then create a new file
+            FILE *fp;
+            if (strcmp(writemod,"o") == 0){
+                // overwrite
+                fp = fopen(path_to_file,"w");
+            }else if (strcmp(writemod, "a") == 0){
+                // append
+                fp = fopen(path_to_file,"a");
+            }else{
+                // defualt
+                fp = fopen(path_to_file,"w");
+            }
+            if (fp == NULL){
+                perror("can't open file");
+                exit(1);
+            }
+
+            ssize_t total = writefile(connfd, fp);
+            sleep(5);
+            printf("write file susccess, numbytes = %ld\n",total);
+
+
+            // update capability list
+            int index = capList.getIndexCapability(user,group,filename);
+            capList.updateCapList(index,user,group,total,timeNow());
+            
+            fclose(fp);
         }
-
-        // fopen a exist file on server, if not exist then create a new file
-        FILE *fp;
-        if (strcmp(writemod,"o") == 0){
-            // overwrite
-            fp = fopen(path_to_file,"w");
-        }else if (strcmp(writemod, "a") == 0){
-            // append
-            fp = fopen(path_to_file,"a");
-        }else{
-            // defualt
-            fp = fopen(path_to_file,"w");
-        }
-        if (fp == NULL){
-            perror("can't open file");
-            exit(1);
-        }
-
-        ssize_t total = writefile(connfd, fp);
-        printf("write file susccess, numbytes = %ld\n",total);
-
-
-        // update capability list
-        int index = capList.getIndexCapability(user,group,filename);
-        capList.updateCapList(index,user,group,total,timeNow());
-        
-        fclose(fp);
-
         //// end of critical section ////
+        slock.remove(filename);
     }
 
     if (strcmp(act, "chmod") == 0){
@@ -286,7 +306,7 @@ void * start(void * arg){
         //// end of critical section ////
     }
 
-    // close(connfd);
+    close(connfd);
     pthread_exit(NULL);
 }
 

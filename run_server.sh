@@ -1,2 +1,5 @@
 # start to running the server
-./server
+while true
+do
+    ./server
+done

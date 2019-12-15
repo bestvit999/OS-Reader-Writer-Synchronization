@@ -9,43 +9,15 @@
 #include "transfer.h"
 #include <string>
 #include <vector>
-#include <semaphore.h>
-#include <pthread.h>
-#include <vector>
-#include <iostream>
 
 ssize_t writefile(int sockfd, FILE *fp);
 
-// reader
-void * reader(void *arg);
-
-#define N 5 // # of threads
-
-int main(int argc, char * argv[]){
-    // if (argc != 4){
-    //     perror("usage:read <filename> <user> <group>");
-    //     exit(1);
-    // }
-    char *argv1[] = {"read","homework2.c","alex","AOS"};
-    char *argv2[] = {"read","homework3.c","ken","AOS"};
-    char *argv3[] = {"read","homework2.c","ken","AOS"};
-    char *argv4[] = {"read","homework5.c","alex","AOS"};
-
-    pthread_t my_thread[N];
-    pthread_create(&my_thread[1], NULL, &reader, (void *)argv1);
-    pthread_create(&my_thread[2], NULL, &reader, (void *)argv2);
-    // pthread_create(&my_thread[1], NULL, &reader, (void *)argv3);
-    // pthread_create(&my_thread[1], NULL, &reader, (void *)argv4);
-    pthread_exit(NULL);
-
-    // read(argv1);
-    // read(argv2);
-}
-
 // $ read {filename} {user} {group}
-void * reader(void * arg){
-    char **argv = (char**)arg;
-    printf("%s %s %s\n",argv[1],argv[2],argv[3]);
+int main(int argc, char* argv[]){
+    if (argc != 4){
+        perror("usage:read <filename> <user> <group>");
+        exit(1);
+    }
 
     // socket
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -101,11 +73,17 @@ void * reader(void * arg){
         exit(1);
     }
 
-    // recv its msg
+    // recv its msg, is about read privilage
     char msg[BUFFSIZE] = {0};
     recv(sockfd, msg, BUFFSIZE, 0);
     if (strcmp(msg,"fail") == 0){
-        perror("read fail");
+        perror("read fail : file is not exist or you have no permission\n");
+        exit(1);
+    }else if (strcmp(msg,"succuss") == 0){
+        // do-nop
+    }else{
+        // synchronization fail
+        perror("read fail : synchronization prob\n");
         exit(1);
     }
 
@@ -113,12 +91,12 @@ void * reader(void * arg){
     FILE *fp = fopen(argv[1],"w");
     ssize_t total_bytes = writefile(sockfd,fp);
 
-    printf("read success, numbytes = %ld\n",total_bytes);
+    sleep(5);
 
+    printf("read success, numbytes = %ld\n",total_bytes);
     fclose(fp);
     close(sockfd);
-    pthread_exit(NULL);
-
+    return 0;
 }
 
 ssize_t writefile(int sockfd, FILE *fp){

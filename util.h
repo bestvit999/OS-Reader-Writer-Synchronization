@@ -1,5 +1,6 @@
 #include <vector>
 #include <string>
+#include <map>
 
 #define OWNERREAD 0
 #define OWNERWRITE 1
@@ -45,6 +46,24 @@ class capability{
         capability(std::string,std::string,std::string,long int,long int,std::string);
         void list();
 };
+#endif
+
+#ifndef SYN_MUTEX_H
+#define SYN_MUTEX_H
+
+#define READING 1
+#define WRITING 2
+
+class synlock{
+    public:
+        std::map<std::string, int> map_syn;
+    public:
+        synlock();
+        int isLock(std::string filename,int status); // determine the lock status of file
+        void insert(std::string, int); // update the current lock status
+        void remove(std::string); // remove the lock
+};
+
 #endif
 
 std::string timeStamp(long int now);

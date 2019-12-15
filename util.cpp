@@ -61,7 +61,7 @@ int capability_list::isReadPermit(std::string user, std::string group, std::stri
             }
         }
     }
-    printf("file is not exist, or you have no permission\n");
+    printf("file is not exist, or user `%s` have no permission\n",user.c_str());
     // std::cout << "file is not exist, or you have no permission" << std::endl;
     return 0;
 }
@@ -91,7 +91,7 @@ int capability_list::isWritePermit(std::string user, std::string group, std::str
             }
         }
     }
-    printf("file is not exist, or you have no permission\n");
+    printf("file is not exist, or user `%s` have no permission\n",user.c_str());
     // std::cout << "file is not exist, or you have no permission" << std::endl;
     return 0;
 }
@@ -107,7 +107,7 @@ int capability_list::isChmodPermit(std::string user, std::string filename){
             return 1;
         }
     }
-    printf("file is not exist, or you have no permission\n");
+    printf("file is not exist, or user `%s` have no permission\n",user.c_str());
     // std::cout << "file is not exist, or you have no permission" << std::endl;
     return 0;
 }
@@ -197,6 +197,45 @@ int capability_list::getIndexCapability(std::string user,std::string group, std:
     // return this->capList[index];
     perror("can't get index of capability");
     exit(1);
+}
+
+synlock::synlock(){}
+
+int synlock::isLock(std::string filename, int status){
+    std::map<std::string, int>::iterator iter = this->map_syn.find(filename);
+
+    if(iter != this->map_syn.end()){
+
+        // SYNCHRONIZATION : multiple reading (can't write)
+        if (status == READING){
+            if (status != iter->second){
+                printf("%s can't be use, the current status is %d\n",filename.c_str(), iter->second);
+                return 0; // fail to operate on the file.
+            }else{
+                printf("%s found, the status is %d\n",filename.c_str(), iter->second);
+                return 1;
+            }
+        }
+
+        // SYNCHRONIZATION : only one can writing at the same time (can't read)
+        if (status == WRITING){
+            printf("%s can't be use, the current status is %d\n",filename.c_str(), iter->second);
+            return 0; // fail to operate on the file
+        }
+    }else{
+        printf("%s can be use, establish the status to %d\n",filename.c_str(),status);
+        insert(filename, status);
+        return 1;
+    }
+    return 0;
+}
+
+void synlock::insert(std::string filename, int status){
+    this->map_syn[filename] = status;
+}
+
+void synlock::remove(std::string filename){
+    this->map_syn.erase(filename);
 }
 
 std::string timeStamp(long int now){

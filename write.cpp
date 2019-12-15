@@ -81,18 +81,27 @@ int main(int argc, char* argv[]){
     }
 
 
-    // check write permit
+    // check write permit, 
     char msg[BUFFSIZE] = {0};
     recv(sockfd, msg, BUFFSIZE,0);
     if (strcmp(msg,"fail") == 0){
         printf("write fail, file is not exist or you have no permission\n");
         close(sockfd);
         exit(1);
+    }else if (strcmp(msg,"succuss") == 0){
+        // do-nop
+    }else{
+        // synchronization fail
+        perror("write fail : synchronization prob\n");
+        exit(1);
     }
+
 
     // open the file that want to be upload to server
     FILE *fp = fopen(argv[1],"r");
     ssize_t total_bytes = readfile(sockfd,fp);
+
+    sleep(5);
 
     if (!total_bytes){
         printf("write fail, numbytes = %ld\n",total_bytes);
