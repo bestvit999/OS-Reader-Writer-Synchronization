@@ -26,17 +26,17 @@ int main(int argc, char * argv[]){
     //     perror("usage:read <filename> <user> <group>");
     //     exit(1);
     // }
-    char *argv1[] = {"read","homework2.c","alex","AOS"};
-    char *argv2[] = {"read","homework3.c","ken","AOS"};
-    char *argv3[] = {"read","homework2.c","ken","AOS"};
-    char *argv4[] = {"read","homework5.c","alex","AOS"};
+    char *argv1[] = {"read","homework1.c","alex","AOS"};
+    char *argv2[] = {"read","homework2.c","john","AOS"};
+    char *argv3[] = {"read","homework3.c","ken","AOS"};
+    char *argv4[] = {"read","homework4.c","merry","CSE"};
 
     pthread_t my_thread[N];
-    pthread_create(&my_thread[1], NULL, &reader, (void *)argv1);
+    // pthread_create(&my_thread[1], NULL, &reader, (void *)argv1);
     pthread_create(&my_thread[2], NULL, &reader, (void *)argv2);
-    // pthread_create(&my_thread[1], NULL, &reader, (void *)argv3);
-    // pthread_create(&my_thread[1], NULL, &reader, (void *)argv4);
-    pthread_exit(NULL);
+    pthread_create(&my_thread[3], NULL, &reader, (void *)argv3);
+    // pthread_create(&my_thread[4], NULL, &reader, (void *)argv4);
+    // pthread_exit(NULL);
 
     // read(argv1);
     // read(argv2);

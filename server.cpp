@@ -16,9 +16,9 @@ void changemod(int sockfd); // change mod
 ssize_t create(int sockfd, FILE *fp); // create the file
 
 // data set of synchronization
-sem_t wrt = 1;
-sem_t mux = 1;
-int readcount = 0;
+// sem_t wrt = 1;
+// sem_t mux = 1;
+// int readcount = 0;
 
 void * start(void * arg); // start the server site
 
@@ -67,7 +67,7 @@ int main(int argc, char * argv[]){
         }
         // for each client request creates a thread and assign the client request to it to process
         // so the main thread can entertain next request
-        if( pthread_create(&tid[t_no++], NULL, &start, &connfd) != 0 )
+        if(pthread_create(&tid[t_no++], NULL, &start, &connfd) != 0 )
             printf("Failed to create thread\n");
 
         if (t_no == 50)
@@ -297,14 +297,14 @@ ssize_t create(int sockfd, FILE *fp){
     char buff[MAX_LINE] = {0};
     while((n = recv(sockfd, buff, MAX_LINE, 0)) > 0){
         total += n;
-        if (n == -1){
+        if (n == (ssize_t)-1){
             perror("Receive File from client Error");
-            //exit(1);
+            exit(1);
         }
 
-        if (fwrite(buff, sizeof(char), n, fp) != n){
+        if ((ssize_t)fwrite(buff, sizeof(char), n, fp) != n){
             perror("Write File Error");
-            //exit(1);
+            exit(1);
         }
         memset(buff, 0, MAX_LINE); // or bzeor(.)
     }
@@ -347,7 +347,7 @@ ssize_t writefile(int sockfd, FILE *fp){
             exit(1);
         }
 
-        if (fwrite(buff, sizeof(char), n, fp) != n){
+        if ((ssize_t)fwrite(buff, sizeof(char), n, fp) != n){
             perror("Write File Error");
             exit(1);
         }

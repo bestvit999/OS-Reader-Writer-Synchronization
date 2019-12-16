@@ -1,14 +1,14 @@
 all : server create read write chmod
 server : server.cpp util.cpp transfer.h util.h
-	g++ -Wall -O3 server.cpp util.cpp -o server
+	g++ -O2 server.cpp util.cpp -o server -lpthread
 create : create.cpp transfer.h
-	g++ -Wall -O3 create.cpp -o create
+	g++ -O2 create.cpp -o create -lpthread
 read : read.cpp transfer.h
-	g++ -Wall -O3 read.cpp -o read
+	g++ -O2 read.cpp -o read -lpthread
 write : write.cpp transfer.h
-	g++ -Wall -O3 write.cpp -o write
+	g++ -O2 write.cpp -o write -lpthread
 chmod : chmod.cpp transfer.h
-	g++ -Wall -O3 chmod.cpp -o chmod
+	g++ -O2 chmod.cpp -o chmod -lpthread
 clrcap :
 	> capabilityList.dat
 clean :
