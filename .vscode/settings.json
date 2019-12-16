@@ -59,7 +59,9 @@
         "typeinfo": "cpp",
         "unordered_map": "cpp",
         "utility": "cpp",
-        "fstream": "cpp"
+        "fstream": "cpp",
+        "__tree": "cpp",
+        "map": "cpp"
     },
     "C_Cpp.errorSquiggles": "Disabled"
 }
